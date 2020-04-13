@@ -6,10 +6,11 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import redis.clients.jedis.Jedis;
 
-import java.util.Scanner;
+import java.util.List;
 
-public class WikipediaDownloader implements Runnable {
+public class WikipediaDownloader extends CityInformationExample implements Runnable {
     private String keyword;
 
     public WikipediaDownloader(String keyword) {
@@ -40,8 +41,7 @@ public class WikipediaDownloader implements Runnable {
                         state = 1;
                     }
                 } else if (state == 1) {
-                    if (childElement.tagName().equals("p")) {
-                        state = 2;
+                    if (childElement.tagName().equals("p") && !childElement.hasClass(".mw-empty-elt")) {
                         response = childElement.text();
                         break;
                     }
@@ -50,15 +50,17 @@ public class WikipediaDownloader implements Runnable {
             try {
                 image_url=document.body().select(".infobox img").get(0).attr("src");
             } catch(Exception e) {
-                e.printStackTrace();
+
             }
         } catch (Exception e) {
-            e.printStackTrace();
+
         }
         WikiResult wikiResult=new WikiResult(this.keyword, response, image_url);
         Gson gson=new GsonBuilder().setPrettyPrinting().create();
         String json=gson.toJson(wikiResult);
-        System.out.println(json);
+        Jedis jedi=new Jedis("localhost", 6379);
+        jedi.set(this.keyword, json);
+        System.out.println(jedi.get(this.keyword));
     }
 
     private String getWikipediaUrlForQuery(String cleanKeyword) {
@@ -66,11 +68,12 @@ public class WikipediaDownloader implements Runnable {
     }
 
     public static void main(String[] args) {
-        Scanner scan=new Scanner(System.in);
-        System.out.print("Enter the query: ");
-        String query=scan.nextLine();
-        TaskManager taskManager=new TaskManager(20);
-        WikipediaDownloader wikipediaDownloader = new WikipediaDownloader(query);
-        taskManager.waitTillIsFreeAndAddTask(wikipediaDownloader);
+        CityInformationExample cityInformation=new CityInformationExample();
+        List<String> arr= cityInformation.getCities();
+        TaskManager taskManager=new TaskManager(500);
+        for(String ele: arr) {
+            WikipediaDownloader wikipediaDownloader = new WikipediaDownloader(ele);
+            taskManager.waitTillIsFreeAndAddTask(wikipediaDownloader);
+        }
     }
 }
