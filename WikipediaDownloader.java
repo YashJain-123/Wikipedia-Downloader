@@ -6,7 +6,6 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import redis.clients.jedis.Jedis;
 
 import java.util.List;
 
@@ -58,9 +57,7 @@ public class WikipediaDownloader extends CityInformationExample implements Runna
         WikiResult wikiResult=new WikiResult(this.keyword, response, image_url);
         Gson gson=new GsonBuilder().setPrettyPrinting().create();
         String json=gson.toJson(wikiResult);
-        Jedis jedi=new Jedis("localhost", 6379);
-        jedi.set(this.keyword, json);
-        System.out.println(jedi.get(this.keyword));
+        System.out.println(json);
     }
 
     private String getWikipediaUrlForQuery(String cleanKeyword) {
